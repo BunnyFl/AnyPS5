@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-bool Http2CookieBoxExists(int cookieBoxId);
+void Http2AddCookieBox(int cookieBoxId);
 void Http2ForgetCookies(int cookieBoxId);
 void Http2FlushCookies(int cookieBoxId);
 std::optional<std::string> Http2CookieHeader(int cookieBoxId, std::string_view url);

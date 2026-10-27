@@ -66,11 +66,6 @@ static void ReleaseOwnedHandles(int owner) {
     }
 }
 
-bool Http2CookieBoxExists(int cookieBoxId) {
-    std::lock_guard lock(g_handlesMutex);
-    return FindHandle(cookieBoxId, Http2Kind::CookieBox) != nullptr;
-}
-
 static bool HasSettings(const Http2Handle& handle) {
     return handle.kind == Http2Kind::Template || handle.kind == Http2Kind::Request;
 }
@@ -356,9 +351,15 @@ int APS5_VABI sceHttp2CreateCookieBox(std::size_t poolSize) {
     void* address = nullptr;
     if (const int result = sceKernelMapNamedFlexibleMemory(&address, mappedSize, 3, 0, "SceHttp2CookieBox"); result != 0) return result;
     std::shared_ptr<void> memory(address, [mappedSize](void* mapped) { sceKernelMunmap(reinterpret_cast<std::uint64_t>(mapped), mappedSize); });
-    std::lock_guard lock(g_handlesMutex);
     const int id = g_nextHandle.fetch_add(1, std::memory_order_relaxed);
-    g_handles.emplace(id, Http2Handle{Http2Kind::CookieBox, 0, poolSize, std::move(memory)});
+    Http2AddCookieBox(id);
+    try {
+        std::lock_guard lock(g_handlesMutex);
+        g_handles.emplace(id, Http2Handle{Http2Kind::CookieBox, 0, poolSize, std::move(memory)});
+    } catch (...) {
+        Http2ForgetCookies(id);
+        throw;
+    }
     return id;
 }
 

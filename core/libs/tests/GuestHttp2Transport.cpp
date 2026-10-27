@@ -48,7 +48,7 @@ bool Throws(TCall call) {
     return false;
 }
 
-enum class Mode { Normal, Large, NoLength, Head, NotFound, Redirect, Auth, Reset, Truncate, StallHandshake, StallHeaders, StallBody, NoAlpn, Informational, StallUpload, Cookie, EarlyFinal, EarlyReset, EarlyEmpty, EarlyLarge, EarlyResetIncomplete };
+enum class Mode { Normal, Large, NoLength, Head, NotFound, Redirect, Auth, Reset, Truncate, StallHandshake, StallHeaders, StallBody, NoAlpn, Informational, StallUpload, Cookie, CookieFlood, EarlyFinal, EarlyReset, EarlyEmpty, EarlyLarge, EarlyResetIncomplete };
 const char* Protocols[] = {"h2", nullptr};
 
 class Server {
@@ -198,6 +198,9 @@ private:
         if (mode != Mode::NoLength) fields.emplace_back("content-length", length);
         if (mode == Mode::Redirect) fields.emplace_back("location", "/another");
         if (mode == Mode::Cookie) fields.emplace_back("set-cookie", "session=fresh; Path=/");
+        if (mode == Mode::CookieFlood) {
+            for (int i = 0; i < 1500; ++i) fields.emplace_back("set-cookie", "f" + std::to_string(i) + "=v; Path=/");
+        }
         std::vector<nghttp2_nv> response;
         for (auto& [name, value] : fields) response.push_back({reinterpret_cast<std::uint8_t*>(name.data()), reinterpret_cast<std::uint8_t*>(value.data()), name.size(), value.size(), 0});
         nghttp2_data_provider2 provider{};
@@ -318,6 +321,32 @@ void CookieBox(int ssl) {
     std::size_t required = 0;
     Require(sceHttp2GetCookie(box, url.c_str(), cookie.data(), &required, cookie.size()) == 0, "response cookie lookup");
     Require(std::string_view(cookie.data()) == "session=fresh; stored=old", "response cookie stored in the box");
+    Require(sceHttp2DeleteCookieBox(box) == 0, "delete cookie box");
+}
+
+void CookieBoxDelete(int ssl) {
+    std::fprintf(stderr, "HTTP2 cookie box delete scenario\n");
+    Server server(Mode::CookieFlood);
+    Client client(ssl);
+    const std::string url = server.Url("127.0.0.1");
+    const int box = sceHttp2CreateCookieBox(0x10000);
+    Require(box > 0 && sceHttp2SetCookieBox(client.tmpl, box) == 0, "bind cookie box");
+    Require(sceHttp2SetCookieMaxNumPerDomain(box, 2000) == 0, "room for every response cookie");
+    client.Create(url);
+    auto pending = std::async(std::launch::async, [&] {
+        try { static_cast<void>(sceHttp2SendRequest(client.request, nullptr, 0)); } catch (const std::exception&) {}
+    });
+    std::size_t required = 0;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (sceHttp2GetCookie(box, url.c_str(), nullptr, &required, 0) != 0) {
+        Require(std::chrono::steady_clock::now() < deadline, "first response cookie stored");
+        std::this_thread::yield();
+    }
+    auto deleting = std::async(std::launch::async, [&] { return sceHttp2DeleteRequest(client.request); });
+    Require(deleting.wait_for(std::chrono::seconds(2)) == std::future_status::ready, "delete returns while the transport stores response cookies");
+    Require(deleting.get() == 0, "delete a request whose transport stores response cookies");
+    Require(pending.wait_for(std::chrono::seconds(2)) == std::future_status::ready, "send ends after the delete");
+    server.Join();
     Require(sceHttp2DeleteCookieBox(box) == 0, "delete cookie box");
 }
 
@@ -561,6 +590,7 @@ int main(int argc, char** argv) {
         for (const auto mode : {Mode::Normal, Mode::Large, Mode::NoLength, Mode::Head, Mode::NotFound, Mode::Redirect, Mode::Auth, Mode::Informational}) Success(ssl, mode);
         for (const auto mode : {Mode::NoAlpn, Mode::Reset, Mode::Truncate, Mode::Redirect, Mode::Auth}) Failure(ssl, mode);
         CookieBox(ssl);
+        CookieBoxDelete(ssl);
         Failure(ssl, Mode::Normal, true);
         for (const auto mode : {Mode::StallHandshake, Mode::StallHeaders, Mode::StallBody, Mode::StallUpload}) {
             Deadline(ssl, mode, false);

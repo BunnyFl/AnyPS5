@@ -321,8 +321,8 @@ void AppendCookie(std::string& header, const Cookie& cookie) {
 }
 
 CookieBox* FindBox(int cookieBoxId) {
-    if (!Http2CookieBoxExists(cookieBoxId)) return nullptr;
-    return &g_cookieBoxes[cookieBoxId];
+    const auto box = g_cookieBoxes.find(cookieBoxId);
+    return box != g_cookieBoxes.end() ? &box->second : nullptr;
 }
 
 std::vector<const Cookie*> Matches(CookieBox& box, const Url& url) {
@@ -359,6 +359,11 @@ void Http2StoreResponseCookie(int cookieBoxId, std::string_view url, std::string
     CookieBox* box = FindBox(cookieBoxId);
     Url parsed{};
     if (box && ParseUrl(url, parsed) == 0) static_cast<void>(StoreCookie(*box, parsed, cookie, Now()));
+}
+
+void Http2AddCookieBox(int cookieBoxId) {
+    std::lock_guard lock(g_cookiesMutex);
+    g_cookieBoxes.try_emplace(cookieBoxId);
 }
 
 void Http2ForgetCookies(int cookieBoxId) {
