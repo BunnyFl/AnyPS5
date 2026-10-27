@@ -48,7 +48,7 @@ bool Throws(TCall call) {
     return false;
 }
 
-enum class Mode { Normal, Large, NoLength, Head, NotFound, Redirect, Auth, Reset, Truncate, StallHandshake, StallHeaders, StallBody, NoAlpn, Informational, StallUpload, EarlyFinal, EarlyReset, EarlyEmpty, EarlyLarge, EarlyResetIncomplete };
+enum class Mode { Normal, Large, NoLength, Head, NotFound, Redirect, Auth, Reset, Truncate, StallHandshake, StallHeaders, StallBody, NoAlpn, Informational, StallUpload, Cookie, EarlyFinal, EarlyReset, EarlyEmpty, EarlyLarge, EarlyResetIncomplete };
 const char* Protocols[] = {"h2", nullptr};
 
 class Server {
@@ -197,6 +197,7 @@ private:
         std::vector<std::pair<std::string, std::string>> fields{{":status", status}, {"x-loopback", "yes"}};
         if (mode != Mode::NoLength) fields.emplace_back("content-length", length);
         if (mode == Mode::Redirect) fields.emplace_back("location", "/another");
+        if (mode == Mode::Cookie) fields.emplace_back("set-cookie", "session=fresh; Path=/");
         std::vector<nghttp2_nv> response;
         for (auto& [name, value] : fields) response.push_back({reinterpret_cast<std::uint8_t*>(name.data()), reinterpret_cast<std::uint8_t*>(value.data()), name.size(), value.size(), 0});
         nghttp2_data_provider2 provider{};
@@ -297,6 +298,28 @@ struct Client {
     }
     ~Client() { if (context > 0) Require(sceHttp2Term(context) == 0, "client term"); }
 };
+
+void CookieBox(int ssl) {
+    std::fprintf(stderr, "HTTP2 cookie box scenario\n");
+    Server server(Mode::Cookie);
+    Client client(ssl);
+    const std::string url = server.Url("127.0.0.1");
+    const int box = sceHttp2CreateCookieBox(0x10000);
+    Require(box > 0 && sceHttp2AddCookie(box, url.c_str(), "stored=old", 10) == 0, "stored cookie");
+    Require(sceHttp2SetCookieBox(client.tmpl, box) == 0, "bind cookie box");
+    client.Create(url);
+    Require(sceHttp2SendRequest(client.request, nullptr, 0) == 0, "send with a cookie box");
+    std::array<char, 64> buffer;
+    while (sceHttp2ReadData(client.request, buffer.data(), buffer.size()) > 0) {}
+    server.Join();
+    const auto& headers = server.Headers();
+    Require(headers.count("cookie") == 1 && headers.find("cookie")->second == "stored=old", "box cookie sent");
+    std::array<char, 64> cookie{};
+    std::size_t required = 0;
+    Require(sceHttp2GetCookie(box, url.c_str(), cookie.data(), &required, cookie.size()) == 0, "response cookie lookup");
+    Require(std::string_view(cookie.data()) == "session=fresh; stored=old", "response cookie stored in the box");
+    Require(sceHttp2DeleteCookieBox(box) == 0, "delete cookie box");
+}
 
 void Success(int ssl, Mode mode, bool disableCa = false) {
     std::fprintf(stderr, "HTTP2 success scenario %d\n", static_cast<int>(mode));
@@ -537,6 +560,7 @@ int main(int argc, char** argv) {
         Require(argc == 1, "test arguments");
         for (const auto mode : {Mode::Normal, Mode::Large, Mode::NoLength, Mode::Head, Mode::NotFound, Mode::Redirect, Mode::Auth, Mode::Informational}) Success(ssl, mode);
         for (const auto mode : {Mode::NoAlpn, Mode::Reset, Mode::Truncate, Mode::Redirect, Mode::Auth}) Failure(ssl, mode);
+        CookieBox(ssl);
         Failure(ssl, Mode::Normal, true);
         for (const auto mode : {Mode::StallHandshake, Mode::StallHeaders, Mode::StallBody, Mode::StallUpload}) {
             Deadline(ssl, mode, false);

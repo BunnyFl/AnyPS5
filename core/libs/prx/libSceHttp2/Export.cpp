@@ -373,7 +373,11 @@ int APS5_VABI sceHttp2DeleteCookieBox(int cookie_box_id) {
 }
 
 int APS5_VABI sceHttp2SetCookieBox(int id, int cookie_box_id) {
-    return Update(id, __func__, [&](auto&) { if (cookie_box_id != 0) NotImplemented_nid_no_patch("sceHttp2SetCookieBox"); });
+    return Update(id, __func__, [&](auto& settings) {
+        if (cookie_box_id != 0 && !FindHandle(cookie_box_id, Http2Kind::CookieBox)) return ERROR_INVALID_ID;
+        settings.cookieBox = cookie_box_id;
+        return 0;
+    }, true);
 }
 
 int APS5_VABI sceHttp2SetRequestNoContentLength(int id) {
@@ -444,9 +448,14 @@ int APS5_VABI sceHttp2GetAutoRedirect(int id, int* enable) {
     });
 }
 
-int APS5_VABI sceHttp2GetCookieBox(void) {
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+int APS5_VABI sceHttp2GetCookieBox(int id, int* cookieBoxId) {
+    if (!cookieBoxId) return ERROR_NULL_POINTER;
+    *cookieBoxId = 0;
+    return Read(id, [&](const auto& settings) {
+        if (settings.cookieBox == 0) return ERROR_NOT_FOUND;
+        *cookieBoxId = settings.cookieBox;
+        return 0;
+    });
 }
 
 int APS5_VABI sceHttp2RedirectCacheFlush(int lib_http2_ctx_id) {
