@@ -253,6 +253,39 @@ bool hintMappingHistoryTests() {
 #endif
 }
 
+bool hintPartialBlockStoreTests() {
+#ifdef _WIN32
+    constexpr std::size_t bytes = 131072;
+    constexpr std::size_t page = 4096;
+    auto* memory = static_cast<std::uint8_t*>(AllocateWatched(bytes, 65536));
+    if (memory == nullptr) return false;
+    GuestAllocations::Mutation().Add(memory, bytes, true, true, false);
+    struct Cleanup {
+        std::uint8_t* memory;
+        ~Cleanup() {
+            GuestAllocations::Mutation().Remove(memory);
+            ReleaseWatched(memory, bytes);
+        }
+    } cleanup{memory};
+    const auto address = reinterpret_cast<std::uint64_t>(memory);
+    std::memset(memory, 0x11, bytes);
+    AgcDriver::GuestMemory::BumpCollectEpoch();
+    const auto before = AgcDriver::GuestMemory::CollectWrites(address + 8 * page, page);
+    Require(before != 0, "the watched page has no collected write history");
+    AgcDriver::GuestMemory::Unwatch(address, 6 * page);
+    Require(!AgcDriver::GuestMemory::Watched(address, 6 * page) && AgcDriver::GuestMemory::Watched(address + 6 * page, 10 * page), "the partial-block import did not exclude only its own pages");
+    memory[8 * page] = 0x22;
+    AgcDriver::GuestMemory::BumpCollectEpoch();
+    Require(AgcDriver::GuestMemory::UntrackedHint(address + 4 * page, 6 * page) != 0, "a range across the import's end has no untracked hint");
+    Require(AgcDriver::GuestMemory::CollectWrites(address + 8 * page, page) != 0, "the watched page past the import stopped collecting CPU writes");
+    Require(!AgcDriver::GuestMemory::UnchangedSince(address + 8 * page, page, before), "a hint walk across a partial-block import consumed a CPU store to a watched page");
+    Require(memory[8 * page] == 0x22, "the hint walk changed guest bytes");
+    return true;
+#else
+    return false;
+#endif
+}
+
 void gpuTimingKeyTests() {
     constexpr std::uint64_t variant = 0x2;
     const auto key = Recorder::DrawTimingKey(variant);
@@ -11838,6 +11871,11 @@ int main(int argc, char** argv) {
         if (argc == 2 && std::string_view(argv[1]) == "--hint-mapping-history-only") {
             if (!hintMappingHistoryTests()) return 77;
             std::cout << "hint mapping history tests passed\n";
+            return 0;
+        }
+        if (argc == 2 && std::string_view(argv[1]) == "--hint-partial-block-store-only") {
+            if (!hintPartialBlockStoreTests()) return 77;
+            std::cout << "hint partial-block store tests passed\n";
             return 0;
         }
         if (argc == 2 && std::string_view(argv[1]) == "--partial-watch-restoration-only") {
