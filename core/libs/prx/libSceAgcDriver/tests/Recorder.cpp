@@ -286,6 +286,47 @@ bool hintPartialBlockStoreTests() {
 #endif
 }
 
+bool sharedBlockRewatchTests() {
+#ifdef _WIN32
+    constexpr std::size_t bytes = 131072;
+    constexpr std::size_t page = 4096;
+    auto* memory = static_cast<std::uint8_t*>(AllocateWatched(bytes, 65536));
+    if (memory == nullptr) return false;
+    GuestAllocations::Mutation().Add(memory, bytes, true, true, false);
+    struct Cleanup {
+        std::uint8_t* memory;
+        ~Cleanup() {
+            GuestAllocations::Mutation().Remove(memory);
+            ReleaseWatched(memory, bytes);
+        }
+    } cleanup{memory};
+    const auto address = reinterpret_cast<std::uint64_t>(memory);
+    std::memset(memory, 0x11, bytes);
+    AgcDriver::GuestMemory::BumpCollectEpoch();
+    AgcDriver::GuestMemory::Unwatch(address, 6 * page);
+    AgcDriver::GuestMemory::Unwatch(address + 8 * page, 4 * page);
+    Require(!AgcDriver::GuestMemory::Watched(address, 6 * page) && !AgcDriver::GuestMemory::Watched(address + 8 * page, 4 * page), "two imports in one block were not both excluded");
+    Require(AgcDriver::GuestMemory::Watched(address + 6 * page, 2 * page) && AgcDriver::GuestMemory::Watched(address + 12 * page, 4 * page), "two imports in one block excluded pages outside both");
+    const auto before = AgcDriver::GuestMemory::CollectWrites(address + 6 * page, page);
+    Require(before != 0, "the page between the imports has no collected write history");
+    const std::array<std::pair<std::uint64_t, std::uint64_t>, 1> first{{{address, address + 6 * page}}};
+    AgcDriver::GuestMemory::Rewatch(first);
+    Require(AgcDriver::GuestMemory::Watched(address, 8 * page), "settling the first import did not return its pages to the write watch");
+    for (std::size_t index = 8; index < 12; ++index) Require(!AgcDriver::GuestMemory::Watched(address + index * page, page), "settling the first import returned a page of the second import in its block to the write watch");
+    Require(!AgcDriver::GuestMemory::Watched(address, 16 * page), "settling one import proved its whole shared block watched");
+    memory[6 * page] = 0x22;
+    AgcDriver::GuestMemory::BumpCollectEpoch();
+    Require(AgcDriver::GuestMemory::CollectWrites(address + 6 * page, page) != 0 && !AgcDriver::GuestMemory::UnchangedSince(address + 6 * page, page, before), "a CPU store between the imports was lost after the first import settled");
+    const std::array<std::pair<std::uint64_t, std::uint64_t>, 1> second{{{address + 8 * page, address + 12 * page}}};
+    AgcDriver::GuestMemory::Rewatch(second);
+    Require(AgcDriver::GuestMemory::Watched(address, 16 * page), "settling both imports did not return their shared block to the write watch");
+    Require(memory[6 * page] == 0x22, "rewatching changed guest bytes");
+    return true;
+#else
+    return false;
+#endif
+}
+
 void gpuTimingKeyTests() {
     constexpr std::uint64_t variant = 0x2;
     const auto key = Recorder::DrawTimingKey(variant);
@@ -11876,6 +11917,11 @@ int main(int argc, char** argv) {
         if (argc == 2 && std::string_view(argv[1]) == "--hint-partial-block-store-only") {
             if (!hintPartialBlockStoreTests()) return 77;
             std::cout << "hint partial-block store tests passed\n";
+            return 0;
+        }
+        if (argc == 2 && std::string_view(argv[1]) == "--shared-block-rewatch-only") {
+            if (!sharedBlockRewatchTests()) return 77;
+            std::cout << "shared-block rewatch tests passed\n";
             return 0;
         }
         if (argc == 2 && std::string_view(argv[1]) == "--partial-watch-restoration-only") {
