@@ -2145,8 +2145,6 @@ thread_local ThreadCollectMemo threadHintMemo;
 bool walkHints(WriteTracker& tracker, std::uint64_t first, std::uint64_t stop) {
     auto cursor = first;
     bool marked = false;
-    // A partial-block import leaves the block's other pages on the write watch, and this walk
-    // clears their marks too: those pages also get the CPU stamp walkWrites would give them.
     StampRuns runs{tracker, StampKind::Cpu};
     while (cursor < stop) {
         std::size_t count = tracker.pages.size();
