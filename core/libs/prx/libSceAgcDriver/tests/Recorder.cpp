@@ -327,6 +327,39 @@ bool sharedBlockRewatchTests() {
 #endif
 }
 
+bool interiorWatchedDriverWriteTests(bool complete) {
+#ifdef _WIN32
+    constexpr std::size_t bytes = 131072;
+    constexpr std::size_t page = 4096;
+    auto* memory = static_cast<std::uint8_t*>(AllocateWatched(bytes, 65536));
+    if (memory == nullptr) return false;
+    GuestAllocations::Mutation().Add(memory, bytes, true, true, false);
+    struct Cleanup {
+        std::uint8_t* memory;
+        ~Cleanup() {
+            GuestAllocations::Mutation().Remove(memory);
+            ReleaseWatched(memory, bytes);
+        }
+    } cleanup{memory};
+    const auto address = reinterpret_cast<std::uint64_t>(memory);
+    std::memset(memory, 0x11, bytes);
+    AgcDriver::GuestMemory::BumpCollectEpoch();
+    AgcDriver::GuestMemory::Unwatch(address, 6 * page);
+    AgcDriver::GuestMemory::Unwatch(address + 12 * page, 4 * page);
+    Require(!AgcDriver::GuestMemory::Watched(address, 6 * page) && !AgcDriver::GuestMemory::Watched(address + 12 * page, 4 * page), "both ends of the block were not excluded");
+    Require(AgcDriver::GuestMemory::Watched(address + 6 * page, 6 * page), "the pages between the excluded ends are not watched");
+    const auto before = AgcDriver::GuestMemory::CollectWrites(address + 8 * page, page);
+    Require(before != 0, "the watched interior page has no collected write history");
+    if (complete) AgcDriver::GuestMemory::MarkWritten(address, 16 * page);
+    else AgcDriver::GuestMemory::MarkPossiblyWritten(address, 16 * page);
+    Require(!AgcDriver::GuestMemory::UnchangedSince(address + 8 * page, page, before), complete ? "a complete driver write across a block with both ends excluded was not recorded on its watched interior page" : "a possible driver write across a block with both ends excluded was not recorded on its watched interior page");
+    return true;
+#else
+    (void)complete;
+    return false;
+#endif
+}
+
 void gpuTimingKeyTests() {
     constexpr std::uint64_t variant = 0x2;
     const auto key = Recorder::DrawTimingKey(variant);
@@ -11922,6 +11955,13 @@ int main(int argc, char** argv) {
         if (argc == 2 && std::string_view(argv[1]) == "--shared-block-rewatch-only") {
             if (!sharedBlockRewatchTests()) return 77;
             std::cout << "shared-block rewatch tests passed\n";
+            return 0;
+        }
+        if (argc == 3 && std::string_view(argv[1]) == "--interior-watched-driver-write-only") {
+            const std::string_view kind = argv[2];
+            if (kind != "complete" && kind != "possible") return 2;
+            if (!interiorWatchedDriverWriteTests(kind == "complete")) return 77;
+            std::cout << "interior watched driver write tests passed\n";
             return 0;
         }
         if (argc == 2 && std::string_view(argv[1]) == "--partial-watch-restoration-only") {

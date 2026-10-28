@@ -1111,7 +1111,10 @@ struct WriteTracker {
 
     bool blockPartWatched(std::uint64_t first, std::uint64_t stop) const {
 #ifdef _WIN32
-        return covers(first, 1) || covers(stop - 1, 1);
+        for (auto page = first; page < stop; page = (page / WritePageBytes + 1) * WritePageBytes) {
+            if (covers(page, 1)) return true;
+        }
+        return false;
 #else
         return GuestWriteWatch::GuestWriteWatchOverlaps_nid_postfix(static_cast<std::uintptr_t>(first), static_cast<std::size_t>(stop - first));
 #endif
