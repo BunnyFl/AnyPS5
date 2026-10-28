@@ -2753,7 +2753,8 @@ bool settleInitialDccTests(const Device& device) {
                 gpu.lock();
                 HostImportFor(context, address, importBytes);
             }
-            Require(!Watched(address, importBytes), "(m) a deferred settle returned an import that is not a whole number of 64 KiB blocks to the write watch");
+            if (kind == Case::PartialBlock) Require(Watched(address, importBytes), "(m) a deferred settle did not return an import of whole and partial 64 KiB blocks to the write watch" + describe(ExistingHostImportFor(context, address, importBytes), address, importBytes));
+            else Require(!Watched(address, importBytes), "(m) a deferred settle returned an import that shares its last 64 KiB block with a compared import to the write watch");
         }
         const auto before = HostImportSettles();
         Require(!fmaskAlone || before.submitted == quiet.submitted, "(m) a settle read was submitted between the FMASK's import and the target's first use");
@@ -2775,7 +2776,8 @@ bool settleInitialDccTests(const Device& device) {
         }
         Require(refusal.empty(), std::string("(m) an initial multisampled DCC import over ") + name + " was refused: " + refusal);
         Require(!fmaskAlone || (after.submitted - before.submitted == 1 && after.rewatched - before.rewatched == 1), "(m) the first use over a pending FMASK settle alone submitted " + std::to_string(after.submitted - before.submitted) + " settle reads, not the FMASK's alone");
-        Require(after.submitted > before.submitted && after.rewatched > before.rewatched && Watched(address, importBytes) && settled != nullptr && !settled->unwatched, std::string("(m) the initial DCC import over ") + name + " did not settle the import and return it to the write watch");
+        const bool settledBefore = kind == Case::PartialBlock;
+        Require((settledBefore ? after.submitted == before.submitted : after.submitted > before.submitted && after.rewatched > before.rewatched) && Watched(address, importBytes) && settled != nullptr && !settled->unwatched, std::string("(m) the initial DCC import over ") + name + " did not settle the import and return it to the write watch");
         if (fmask != nullptr) {
             const auto* settledFmask = ExistingHostImportFor(context, target.fmaskAddress, fmaskBytes);
             Require(Watched(target.fmaskAddress, fmaskBytes) && settledFmask != nullptr && !settledFmask->unwatched, "(m) the FMASK's import did not settle back into the write watch" + describe(settledFmask, target.fmaskAddress, fmaskBytes));
