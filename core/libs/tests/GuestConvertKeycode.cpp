@@ -139,16 +139,28 @@ int main() {
     Require(sceConvertKeycodeGetVirtualKeycode(100, 4, &virtualKey) == 0 && virtualKey == 255);
     Require(sceConvertKeycodeGetVirtualKeycode(136, 24, &virtualKey) == 0 && virtualKey == 21);
     Require(sceConvertKeycodeGetVirtualKeycode(65535, 4, &virtualKey) == 0 && virtualKey == 255);
-    for (std::uint32_t layout : {2u, 3u, 12u, 31u, 39u}) {
-        virtualKey = 0xABCD;
-        bool rejected = false;
-        try {
-            sceConvertKeycodeGetVirtualKeycode(28, layout, &virtualKey);
-
-        } catch (const std::runtime_error&) {
-            rejected = true;
+    for (std::uint32_t layout : {2u, 3u, 12u}) {
+        Require(sceConvertKeycodeGetVirtualKeycode(28, layout, &virtualKey) == 0 && virtualKey == 90);
+        Require(sceConvertKeycodeGetVirtualKeycode(29, layout, &virtualKey) == 0 && virtualKey == 89);
+    }
+    for (std::uint32_t layout : {31u, 38u, 39u}) {
+        Require(sceConvertKeycodeGetVirtualKeycode(28, layout, &virtualKey) == 0 && virtualKey == 89);
+    }
+    {
+        constexpr std::uint32_t oldSdkVersion = 0x03000000u;
+        std::memcpy(process.data() + 16, &oldSdkVersion, sizeof(oldSdkVersion));
+        for (std::uint32_t layout : {2u, 3u, 12u}) {
+            Require(sceConvertKeycodeGetVirtualKeycode(28, layout, &virtualKey) == 0 && virtualKey == 89);
+            Require(sceConvertKeycodeGetVirtualKeycode(29, layout, &virtualKey) == 0 && virtualKey == 90);
         }
-        Require(rejected && virtualKey == 0xABCD);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 31, &virtualKey) == 0 && virtualKey == 89);
+        char16_t rejectedCharacter = u'?';
+        for (std::uint32_t layout : {38u, 39u}) {
+            virtualKey = 0xABCD;
+            Require(sceConvertKeycodeGetVirtualKeycode(28, layout, &virtualKey) == static_cast<int>(0x80BC001Du) && virtualKey == 0xABCD);
+            Require(sceConvertKeycodeGetCharacter(28, 0, layout, &rejectedCharacter) == static_cast<int>(0x80BC001Du) && rejectedCharacter == u'?');
+        }
+        std::memcpy(process.data() + 16, &sdkVersion, sizeof(sdkVersion));
     }
 
     // The exported function with the real UserService: unknown users fail, the initial user reports the US-English default (keyboard type 20 -> IME 4).
@@ -208,6 +220,8 @@ int main() {
     Require(sceConvertKeycodeGetCharacter(31, 0x4000300, 30, &character) == 0 && character == 0x200C);
     Require(sceConvertKeycodeGetCharacter(32, 0x4000300, 30, &character) == 0 && character == 0x200E);
     Require(sceConvertKeycodeGetCharacter(33, 0x4000300, 30, &character) == 0 && character == 0x200F);
+    Require(sceConvertKeycodeGetCharacter(28, 0, 31, &character) == 0 && character == u'y');
+    Require(sceConvertKeycodeGetCharacter(29, 0, 39, &character) == 0 && character == u'z');
     for (std::uint32_t layout = 1; layout <= 30; ++layout) {
         for (std::uint16_t key : {83, 224, 225, 226, 227, 228, 229, 230, 231}) {
             Require(sceConvertKeycodeGetCharacter(key, 0xFFFFFFFFu, layout, &character) == 0 && character == 0);
