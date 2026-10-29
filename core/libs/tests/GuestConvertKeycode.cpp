@@ -233,16 +233,26 @@ int main() {
     char16_t kbdChar = u'?';
     Require(sceConvertKeycodeGetCharacterFromKeyboardData(nullptr, 0, 0, 4, &kbdChar) == static_cast<int>(0x80BC0031u));
     Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0, 4, nullptr) == static_cast<int>(0x80BC0031u));
+    constexpr int invalidParameter = static_cast<int>(0x80BC0030u);
     for (std::int32_t badIndex : {-1, 1, 16}) {
         kbdChar = u'?';
-        bool rejected = false;
-        try {
-            sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, badIndex, 0, 4, &kbdChar);
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        Require(rejected && kbdChar == u'?');
+        Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, badIndex, 0, 4, &kbdChar) == invalidParameter && kbdChar == u'?');
     }
+    for (std::uint32_t badState : {0x1u, 0x200u, 0x20000u}) {
+        kbdChar = u'?';
+        Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, badState, 4, &kbdChar) == invalidParameter && kbdChar == u'?');
+    }
+    for (std::int32_t badLength : {0, 17, -1}) {
+        KeyboardData badData = keyData;
+        badData.length = badLength;
+        Require(sceConvertKeycodeGetCharacterFromKeyboardData(&badData, 0, 0, 4, &kbdChar) == invalidParameter);
+    }
+    KeyboardData badLed = keyData;
+    badLed.led = 8;
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&badLed, 0, 0, 4, &kbdChar) == invalidParameter);
+    KeyboardData badModifier = keyData;
+    badModifier.modifier_key = 0x100;
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&badModifier, 0, 0, 40, &kbdChar) == invalidParameter);
     for (std::uint32_t layout : {31u, 39u}) {
         kbdChar = u'?';
         Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0, layout, &kbdChar) == 0 && kbdChar == u'a');
@@ -250,6 +260,16 @@ int main() {
     Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0, 0, &kbdChar) == static_cast<int>(0x80BC001Du));
     Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0, 40, &kbdChar) == static_cast<int>(0x80BC001Du));
     Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0, 4, &kbdChar) == 0 && kbdChar == u'a');
-    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0x200, 4, &kbdChar) == 0 && kbdChar == u'A');
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0x80, 4, &kbdChar) == 0 && kbdChar == u'a');
+    KeyboardData shifted = keyData;
+    shifted.modifier_key = 0x02;
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&shifted, 0, 0, 4, &kbdChar) == 0 && kbdChar == u'A');
+    KeyboardData capsLock = keyData;
+    capsLock.led = 2;
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&capsLock, 0, 0, 4, &kbdChar) == 0 && kbdChar == u'A');
+    KeyboardData numLock = keyData;
+    numLock.led = 1;
+    numLock.key_code[0] = 89;
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&numLock, 0, 0, 4, &kbdChar) == 0 && kbdChar == u'1');
     return 0;
 }
