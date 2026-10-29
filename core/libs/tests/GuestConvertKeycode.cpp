@@ -288,5 +288,31 @@ int main() {
     numLock.led = 1;
     numLock.key_code[0] = 89;
     Require(sceConvertKeycodeGetCharacterFromKeyboardData(&numLock, 0, 0, 4, &kbdChar) == 0 && kbdChar == u'1');
+    KeyboardData full = keyData;
+    full.length = 16;
+    full.key_code[15] = 5;
+    full.led = 7;
+    full.modifier_key = 0xFF;
+    char16_t expected = u'?';
+    Require(sceConvertKeycodeGetCharacter(5, 0x7FF00, 4, &expected) == 0);
+    kbdChar = u'?';
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&full, 15, 0, 4, &kbdChar) == 0 && kbdChar == expected);
+    for (std::uint32_t goodState : {0x4000000u, 0x8000000u, 0x10000000u, 0x1C000080u}) {
+        for (std::uint32_t layout : {4u, 24u, 30u}) {
+            Require(sceConvertKeycodeGetCharacter(4, goodState, layout, &expected) == 0);
+            kbdChar = u'?';
+            Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, goodState, layout, &kbdChar) == 0 && kbdChar == expected);
+        }
+    }
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0x4000000, 24, &kbdChar) == 0 && kbdChar == 0x3141);
+    for (std::uint32_t badState : {0x40u, 0x100u, 0x20000000u, 0x80000000u}) {
+        kbdChar = u'?';
+        Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, badState, 4, &kbdChar) == invalidParameter && kbdChar == u'?');
+    }
+    const std::uint32_t oldSdkVersion = 0x03000000u;
+    std::memcpy(process.data() + 16, &oldSdkVersion, sizeof(oldSdkVersion));
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&keyData, 0, 0, 38, &kbdChar) == static_cast<int>(0x80BC001Du));
+    Require(sceConvertKeycodeGetCharacterFromKeyboardData(&badLed, 0, 0, 38, &kbdChar) == invalidParameter);
+    std::memcpy(process.data() + 16, &sdkVersion, sizeof(sdkVersion));
     return 0;
 }
