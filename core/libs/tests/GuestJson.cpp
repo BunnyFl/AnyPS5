@@ -1567,9 +1567,25 @@ static int NumericLocale() {
     return failures ? 1 : 0;
 }
 
+static void SerializeEscapes() {
+    const std::string text = "{\"a/b\x7f\":\"http://x/y\x7f\\u0001\\\"\\\\\\t\"}";
+    Value root{};
+    _ZN3sce4Json5ValueC1Ev(&root);
+    Require(_ZN3sce4Json6Parser5parseERNS0_5ValueEPKcm(&root, text.c_str(), text.size()) == 0);
+    const std::string serialized = Serialize(root);
+    Require(serialized == "{\"a\\/b\\u007f\":\"http:\\/\\/x\\/y\\u007f\\u0001\\\"\\\\\\t\"}");
+    Value reparsed{};
+    _ZN3sce4Json5ValueC1Ev(&reparsed);
+    Require(_ZN3sce4Json6Parser5parseERNS0_5ValueEPKcm(&reparsed, serialized.c_str(), serialized.size()) == 0);
+    Require(Serialize(reparsed) == serialized);
+    _ZN3sce4Json5ValueD1Ev(&reparsed);
+    _ZN3sce4Json5ValueD1Ev(&root);
+}
+
 int main(int argc, char** argv) {
     if (argc == 2 && std::strcmp(argv[1], "--numeric-locale") == 0) return NumericLocale();
     ParseAndRoundTrip();
+    SerializeEscapes();
     NestingDepth();
     ObjectsAndArrays();
     ArrayAssignment();

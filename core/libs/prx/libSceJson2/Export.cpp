@@ -233,8 +233,9 @@ void AppendEscaped(std::string& out, const std::string& text) {
             case '\n': out += "\\n"; break;
             case '\r': out += "\\r"; break;
             case '\t': out += "\\t"; break;
+            case '/': out += "\\/"; break;
             default:
-                if (c < 0x20) {
+                if (c < 0x20 || c == 0x7f) {
                     char buffer[8];
                     std::snprintf(buffer, sizeof(buffer), "\\u%04x", c);
                     out += buffer;
