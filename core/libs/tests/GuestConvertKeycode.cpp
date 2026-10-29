@@ -160,6 +160,23 @@ int main() {
             Require(sceConvertKeycodeGetVirtualKeycode(28, layout, &virtualKey) == static_cast<int>(0x80BC001Du) && virtualKey == 0xABCD);
             Require(sceConvertKeycodeGetCharacter(28, 0, layout, &rejectedCharacter) == static_cast<int>(0x80BC001Du) && rejectedCharacter == u'?');
         }
+        const auto setSdkVersion = [&](std::uint32_t version) { std::memcpy(process.data() + 16, &version, sizeof(version)); };
+        setSdkVersion(0x03FFFFFFu);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 2, &virtualKey) == 0 && virtualKey == 89);
+        setSdkVersion(0x04000000u);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 2, &virtualKey) == 0 && virtualKey == 90);
+        setSdkVersion(0x05FFFFFFu);
+        KeyboardData oldKeyData{};
+        oldKeyData.length = 1;
+        oldKeyData.key_code[0] = 4;
+        Require(sceConvertKeycodeGetCharacterFromKeyboardData(&oldKeyData, 0, 0, 38, &rejectedCharacter) == static_cast<int>(0x80BC001Du) && rejectedCharacter == u'?');
+        setSdkVersion(0x06000000u);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 38, &virtualKey) == 0 && virtualKey == 89);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 39, &virtualKey) == static_cast<int>(0x80BC001Du));
+        setSdkVersion(0x07FFFFFFu);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 39, &virtualKey) == static_cast<int>(0x80BC001Du));
+        setSdkVersion(0x08000000u);
+        Require(sceConvertKeycodeGetVirtualKeycode(28, 39, &virtualKey) == 0 && virtualKey == 89);
         std::memcpy(process.data() + 16, &sdkVersion, sizeof(sdkVersion));
     }
 
