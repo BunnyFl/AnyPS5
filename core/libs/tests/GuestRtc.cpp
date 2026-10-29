@@ -102,6 +102,9 @@ int main(int argc, char** argv) {
         Require(sceRtcFormatRFC2822(text, &year75535, 0) == 0 && std::strcmp(text, "Fri, 01 Jan 9999 00:00:00 +0000") == 0);
         Require(sceRtcFormatRFC3339Precise(text, &year75535, -60, 6) == 0 && std::strcmp(text, "9998-12-31T23:00:00.000000-01:00") == 0);
         Require(sceRtcFormatRFC2822(text, &distant, -821) == 0 && std::strcmp(text, "Mon, 17 Jan 3278 10:44:10 -1341") == 0);
+        const RtcTick westBound{3600000000ull}, westBelow{3599999999ull};
+        Require(sceRtcFormatRFC3339Precise(text, &westBound, -60, 6) == 0 && std::strcmp(text, "0001-01-01T00:00:00.000000-01:00") == 0);
+        Require(sceRtcFormatRFC3339Precise(text, &westBelow, -60, 6) == static_cast<int>(0x80B50003));
         return 0;
     }
     EnterTitleDirectory("CUSA00000");
