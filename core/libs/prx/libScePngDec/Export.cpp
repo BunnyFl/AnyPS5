@@ -197,7 +197,7 @@ bool validTransparency(const Chunk& chunk, std::uint8_t colorType, bool hasPalet
     case Decoder::Png::ColorType::Rgb:
         return chunk.length == 6;
     case Decoder::Png::ColorType::Palette:
-        return hasPalette && chunk.length <= paletteEntries;
+        return hasPalette && chunk.length != 0 && chunk.length <= paletteEntries;
     default:
         return false;
     }
@@ -307,14 +307,12 @@ ChunkScan scanChunks(std::span<const std::uint8_t> png) {
             colorType = chunk->data[9];
             appendChunk(scan.png, "IHDR", chunk->data);
         } else if (chunk->is("PLTE")) {
-            if (chunk->length % 3 == 0 && chunk->length <= MAX_PALETTE_SIZE) {
-                paletteSeen = true;
-                if (*colorType == static_cast<std::uint8_t>(Decoder::Png::ColorType::Palette)) {
-                    hasPalette = true;
-                    paletteEntries = chunk->length / 3;
-                    palette.assign(chunk->data.begin(), chunk->data.end());
-                    palette.resize(MAX_PALETTE_SIZE);
-                }
+            paletteSeen = true;
+            if (*colorType == static_cast<std::uint8_t>(Decoder::Png::ColorType::Palette)) {
+                hasPalette = true;
+                paletteEntries = chunk->length / 3;
+                palette.assign(chunk->data.begin(), chunk->data.end());
+                palette.resize(MAX_PALETTE_SIZE);
             }
         } else if (chunk->is("tRNS") && chunk->crcValid && !hasTransparency
                    && validTransparency(*chunk, *colorType, hasPalette, paletteEntries)) {
