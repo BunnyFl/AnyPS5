@@ -174,7 +174,7 @@ static void CheckDimensionReporting(std::uint32_t width, std::uint32_t height) {
     constexpr std::int32_t invalidAddr = static_cast<std::int32_t>(0x80690001);
     constexpr std::int32_t invalidSize = static_cast<std::int32_t>(0x80690002);
     constexpr std::int32_t invalidParam = static_cast<std::int32_t>(0x80690003);
-    constexpr std::int32_t invalidData = static_cast<std::int32_t>(0x80690010);
+    constexpr std::int32_t decodeError = static_cast<std::int32_t>(0x80690012);
     std::vector<std::uint8_t> rgb(static_cast<std::size_t>(width) * height * 3);
     for (std::size_t i = 0; i < rgb.size(); ++i) rgb[i] = static_cast<std::uint8_t>(i * 13 + 7);
     const auto png = Decoder::Png::Encode(rgb, width, height, 3);
@@ -227,7 +227,7 @@ static void CheckDimensionReporting(std::uint32_t width, std::uint32_t height) {
             Require(scePngDecDecode(handle, &decode, nullptr) == invalidParam);
             decode.pixel_format = format;
             decode.png_mem_size = 8;
-            Require(scePngDecDecode(handle, &decode, nullptr) == invalidData);
+            Require(scePngDecDecode(handle, &decode, nullptr) == decodeError);
             Require(std::all_of(image.begin(), image.end(), [](auto byte) { return byte == 0xCC; }));
         }
     }
