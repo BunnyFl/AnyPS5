@@ -2,7 +2,7 @@
 
 ### Known export names; ABI prototypes unverified
 
-- 93 of the 150 `sce::Xml` exports in [Export.cpp](../../../core/libs/prx/libSceXml/Export.cpp) are stubs. All 150 are in the PS5 3.20 `libSceXml` export inventory from [PS5-3.20_Libs](https://github.com/DNNDHH/PS5-3.20_Libs) and are named after the mangled symbol the [verified NID name database](https://github.com/zecoxao/sce_symbols/blob/2883963a0a514ba6e77407a08ef4730a65e88254/aerolib.csv) gives for their NID, and the NID of that name matches. The prototypes and behavior of the 93 stubs are not established; they use the existing no-parameter import-resolution convention and throw through `NotImplemented_nid_no_patch`. The declarations do not claim an ABI or behavior.
+- 97 of the 184 `sce::Xml` exports in [Export.cpp](../../../core/libs/prx/libSceXml/Export.cpp) are stubs. All 183 functions are in the PS5 3.20 `libSceXml` export inventory from [PS5-3.20_Libs](https://github.com/DNNDHH/PS5-3.20_Libs), and the data export `invalidNodeId` is in the export table of 13.42 `libSceXml.sprx`. Each is named after the mangled symbol the [verified NID name database](https://github.com/zecoxao/sce_symbols/blob/2883963a0a514ba6e77407a08ef4730a65e88254/aerolib.csv) gives for its NID, and the NID of that name matches. The prototypes and behavior of the 97 stubs are not established; they use the existing no-parameter import-resolution convention and throw through `NotImplemented_nid_no_patch`. The declarations do not claim an ABI or behavior.
 
 ### Value types and handle constructors
 
@@ -19,4 +19,8 @@
   - A failure of allocation 2 to 9 in `initialize` throws (the module faults at 2 and 9 and keeps a partial engine at 3 to 8), and so does `parse` after a failure of allocation 10 to 15.
   - A text entry or table offset of 16 MiB or more, an element-name offset above 0xffff, an attribute block above 0xffff bytes and a sibling link that would land past the end of the node stream throw, because the module's result was not measured.
   - Terminating the `Initializer` before the `DocumentBuilder` makes the module fault in `terminate`; here the builder still frees its blocks.
-  - `getDocument` and the `Document` and `Node` reads that would show the parsed document are not implemented yet.
+- [Document](../../../core/libs/prx/libSceXml/src/Document.cpp) and [its reads](../../../core/libs/prx/libSceXml/src/DomReader.cpp) (libSceXml) - follow `libSceXml.sprx` of firmware 13.42 run under an emulator, not measured on a console; its 16 node, string and number reads and the status `getParent` sets give its results on 107,121 of 107,185 checks over 369 parses; the other 64 are string reads past the end of a table, which throw as described below. Not modelled:
+  - A string past the used end of a table is empty only while the table is below the size the module first zeroes and the read is inside it: 5,240 bytes of text and 2,024 of element names, with the same 2,024 taken for attribute names, which were measured only up to 980 used bytes. A grown table is zeroed further (element names with 2,103 bytes used read zero up to 9,352), which isn't modelled; those reads and any other read past the end throw.
+  - After the builder parses again or terminates, an older `Document` reads freed memory in the module; every read of it throws, including `getStatus`, which returned 0. Assigning an empty `Document` over a live one faults in the module and throws.
+  - A string taken from a document still being fed stays valid until the builder starts another document or terminates and no `Document` of it is left; how long the module's pointer stays valid is not measured.
+  - `getXmlMeta`, `getChildNodes`, `getAttributes`, `getElementsByTagName`, `NodeList` and `Attr` throw.
