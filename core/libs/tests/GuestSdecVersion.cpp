@@ -19,7 +19,7 @@ using GetVersion = void (APS5_VABI*)(std::uint32_t*);
 
 void CheckVersion(GetVersion getVersion, std::uint32_t expected, const char* name) {
     for (unsigned char fill : {0xA5, 0x5A}) {
-        unsigned char buffer[12];
+        alignas(std::uint32_t) unsigned char buffer[12];
         std::memset(buffer, fill, sizeof(buffer));
         getVersion(reinterpret_cast<std::uint32_t*>(buffer));
         std::uint32_t version = 0;
