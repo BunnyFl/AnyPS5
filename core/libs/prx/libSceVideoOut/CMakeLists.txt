@@ -4,6 +4,7 @@ add_library(libSceVideoOut SHARED EXCLUDE_FROM_ALL
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Event.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Buffer.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Output.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/SysMode.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/VideoOutDriver.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/DisplayWindow.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/PadInput.cpp
@@ -79,6 +80,17 @@ if(BUILD_TESTING)
     if(WIN32)
         set_tests_properties(video_out_output_mode_policy PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
+    endif()
+
+    add_test_executable(guest_video_out_sys_mode_tests ${LIBS_INCLUDE_DIR}/tests/GuestVideoOutSysMode.cpp)
+    target_include_directories(guest_video_out_sys_mode_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_video_out_sys_mode_tests PRIVATE libSceVideoOut libkernel libc)
+    configure_windows_unwind(guest_video_out_sys_mode_tests)
+    add_test(NAME guest_video_out_sys_mode COMMAND guest_video_out_sys_mode_tests)
+    set_tests_properties(guest_video_out_sys_mode PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_video_out_sys_mode PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceVideoOut>;PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
     endif()
 
     add_test_executable(guest_video_out_high_frame_rate_tests ${LIBS_INCLUDE_DIR}/tests/GuestVideoOutHighFrameRate.cpp)

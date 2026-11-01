@@ -417,14 +417,6 @@ int APS5_VABI sceVideoOutSysHdmiMonitorInfoIsMorpheus() {
     NotImplemented_nid_no_patch(__func__);
 }
 
-int APS5_VABI sceVideoOutSysInitMode() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
-int APS5_VABI sceVideoOutSysIsModeS3d() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
 int APS5_VABI sceVideoOutSysIsOutputSupported() {
     NotImplemented_nid_no_patch(__func__);
 }
@@ -442,26 +434,6 @@ int APS5_VABI sceVideoOutSysIsUserStatusSystemDefault() {
 }
 
 int APS5_VABI sceVideoOutSysIsUserStatusVr() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
-int APS5_VABI sceVideoOutSysModeIsHdr() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
-int APS5_VABI sceVideoOutSysModeIsSystemDefault() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
-int APS5_VABI sceVideoOutSysModeIsVrLegacy() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
-int APS5_VABI sceVideoOutSysModeIsVrNative() {
-    NotImplemented_nid_no_patch(__func__);
-}
-
-int APS5_VABI sceVideoOutSysModeIsVr() {
     NotImplemented_nid_no_patch(__func__);
 }
 
