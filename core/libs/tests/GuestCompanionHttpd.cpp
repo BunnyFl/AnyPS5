@@ -108,12 +108,12 @@ void CheckResponseBuilders() {
     Require(std::memcmp(response, untouched, sizeof(response)) == 0, "sceCompanionHttpdSetStatus wrote the response");
     Require(sceCompanionHttpdSetBody("body", 4, response) == 0, "sceCompanionHttpdSetBody did not return zero");
     Require(std::memcmp(response, untouched, sizeof(response)) == 0, "sceCompanionHttpdSetBody wrote the response");
-    RequireNotImplemented([] { sceCompanionHttpdGet2ndScreenStatus(); }, "sceCompanionHttpdGet2ndScreenStatus");
-    RequireNotImplemented([] { sceCompanionHttpdGetUserId(); }, "sceCompanionHttpdGetUserId");
-    RequireNotImplemented([] { sceCompanionHttpdInitialize2(); }, "sceCompanionHttpdInitialize2");
-    RequireNotImplemented([] { sceCompanionHttpdRegisterRequestBodyReceptionCallback(); }, "sceCompanionHttpdRegisterRequestBodyReceptionCallback");
-    RequireNotImplemented([] { sceCompanionHttpdRegisterRequestCallback2(); }, "sceCompanionHttpdRegisterRequestCallback2");
-    RequireNotImplemented([] { sceCompanionHttpdUnregisterRequestBodyReceptionCallback(); }, "sceCompanionHttpdUnregisterRequestBodyReceptionCallback");
+    Require(sceCompanionHttpdGet2ndScreenStatus() == 0, "sceCompanionHttpdGet2ndScreenStatus did not return zero");
+    Require(sceCompanionHttpdGetUserId() == 0, "sceCompanionHttpdGetUserId did not return zero");
+    Require(sceCompanionHttpdInitialize2() == 0, "sceCompanionHttpdInitialize2 did not return zero");
+    Require(sceCompanionHttpdRegisterRequestBodyReceptionCallback() == 0, "sceCompanionHttpdRegisterRequestBodyReceptionCallback did not return zero");
+    Require(sceCompanionHttpdRegisterRequestCallback2() == 0, "sceCompanionHttpdRegisterRequestCallback2 did not return zero");
+    Require(sceCompanionHttpdUnregisterRequestBodyReceptionCallback() == 0, "sceCompanionHttpdUnregisterRequestBodyReceptionCallback did not return zero");
 }
 
 }
