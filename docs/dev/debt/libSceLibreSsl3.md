@@ -28,7 +28,7 @@
 
 ### Additional callable export inventory
 
-- [Additional exports](../../../core/libs/prx/libSceLibreSsl3/AdditionalExports.cpp) declare 175 callable exports: 165 named and 10 known only by NID. Every entry throws. Parameterless `int` declarations are unknown-signature placeholders, not verified ABI contracts. Names/NIDs match the 13.60 export table. No functional implementation or title unblock is claimed.
+- [Additional exports](../../../core/libs/prx/libSceLibreSsl3/AdditionalExports.cpp) declare 168 callable exports: 158 named and 10 known only by NID. Every entry throws. Parameterless `int` declarations are unknown-signature placeholders, not verified ABI contracts. Names/NIDs match the 13.60 export table. No functional implementation or title unblock is claimed.
 
 | Name | NID |
 | --- | --- |
@@ -63,11 +63,9 @@
 | `tls_read` | `7RvDjfy4gUA` |
 | `BIO_meth_set_read` | `8A-gU2xQfjY` |
 | `EC_POINT_set_affine_coordinates_GFp` | `8AGfaSvdDq4` |
-| `SSL_CTX_set_max_early_data` | `8kct4CSWwOA` |
 | `tls_configure` | `8pwP-7j5UZI` |
 | `X509_STORE_CTX_get0_param` | `8wroYNJAQpo` |
 | `unknown` | `A-Hs-8mau+8` |
-| `ERR_load_X509_strings` | `A0lZtFjhcTw` |
 | `tls_config_set_key_mem` | `A65b+ZhOt9k` |
 | `BN_clear_free` | `ABcJv8S1KEM` |
 | `unknown` | `AiNud8LR8B4` |
@@ -77,7 +75,6 @@
 | `X509_get_ext_by_NID` | `BRjfzlGULmU` |
 | `EVP_PKEY_security_bits` | `BS5yWv6X-hg` |
 | `X509_check_akid` | `C7eFtWPfLdk` |
-| `SSL_set_quic_use_legacy_codepoint` | `CFRaBB2+R+s` |
 | `SSL_CTX_set_default_verify_paths` | `DZ6fywqpaik` |
 | `TLS_server_method` | `EtM5Jwx4EFo` |
 | `ERR_lib_error_string` | `F7jknWesBTY` |
@@ -100,9 +97,7 @@
 | `tls_config_free` | `LL8N+X6DA-4` |
 | `HMAC_CTX_new` | `LcxutSyn11o` |
 | `X509_CRL_get0_by_cert` | `LdGe2IfIlpI` |
-| `ERR_load_PEM_strings` | `M7ze0mz2jQM` |
 | `tls_error` | `N+G3Gxequt0` |
-| `OpenSSL_add_all_digests` | `O9Thca3enw8` |
 | `EVP_PKEY_base_id` | `OqtHJ7QUZg8` |
 | `unknown` | `PBYz0kpXwg8` |
 | `X509_new` | `PNfwr3s6dEs` |
@@ -135,7 +130,6 @@
 | `tls_connect_socket` | `ZERQN8ewpgk` |
 | `SSL_CTX_set_quic_method` | `ZFeTGo4ybcw` |
 | `X509_gmtime_adj` | `ZQ3b6SakHkc` |
-| `SSL_process_quic_post_handshake` | `aKGUCnoiE+k` |
 | `unknown` | `aLdgrI2jAF0` |
 | `EC_POINT_clear_free` | `aSO3Svp7umY` |
 | `tls_config_set_protocols` | `agQxMaXVE8o` |
@@ -195,7 +189,6 @@
 | `PKCS5_PBKDF2_HMAC` | `vnwZHU5FvBQ` |
 | `ASN1_OCTET_STRING_free` | `vo-cv5gnPUA` |
 | `tls_config_parse_protocols` | `vu4FgwGayHY` |
-| `SSL_CTX_set_post_handshake_auth` | `wHdymWL7CbE` |
 | `tls_config_insecure_noverifyname` | `wNQT6Zn4UG4` |
 | `X509_EXTENSION_free` | `wbJDMMsje6s` |
 | `ASN1_TYPE_free` | `whL1IRBxFZA` |
