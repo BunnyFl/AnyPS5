@@ -1,0 +1,15 @@
+add_library(libSceAjmi SHARED EXCLUDE_FROM_ALL Export.cpp)
+target_include_directories(libSceAjmi PRIVATE ${LIBS_INCLUDE_DIR})
+configure_windows_unwind(libSceAjmi)
+
+if(BUILD_TESTING)
+    add_test_executable(guest_ajmi_instance_codec_type_tests ${LIBS_INCLUDE_DIR}/tests/GuestAjmiInstanceCodecType.cpp)
+    target_include_directories(guest_ajmi_instance_codec_type_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_ajmi_instance_codec_type_tests PRIVATE libSceAjmi libc)
+    configure_windows_unwind(guest_ajmi_instance_codec_type_tests)
+    add_test(NAME guest_ajmi_instance_codec_type COMMAND guest_ajmi_instance_codec_type_tests)
+    if(WIN32)
+        set_tests_properties(guest_ajmi_instance_codec_type PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceAjmi>")
+    endif()
+endif()

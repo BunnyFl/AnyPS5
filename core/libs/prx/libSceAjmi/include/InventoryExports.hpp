@@ -16,7 +16,7 @@ int APS5_VABI sceAjmiInstanceSwitch();
 int APS5_VABI sceAjmiDecAt9ParseConfigData();
 int APS5_VABI sceAjmiInitialize();
 int APS5_VABI sceAjmiBatchErrorDump();
-int APS5_VABI sceAjmiInstanceCodecType();
+int APS5_VABI sceAjmiInstanceCodecType(std::uint32_t instance);
 int APS5_VABI sceAjmiMemoryUnregister();
 int APS5_VABI sceAjmiInstanceDestroy();
 int APS5_VABI sceAjmiDecMp3ParseFrame();

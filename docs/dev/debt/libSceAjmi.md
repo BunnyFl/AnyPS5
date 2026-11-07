@@ -2,7 +2,7 @@
 
 ### Additional callable exports
 
-- [Additional callable exports](../../../core/libs/prx/libSceAjmi/Export.cpp) - 22 entries present in both version-labelled images are import-resolution declarations only. None is listed in the pinned public 3.20 catalogue for this library. Neither label independently authenticates retail firmware provenance. Parameter lists, return types and behavior are unverified; parameterless `int` declarations are placeholders, not verified ABI contracts. Every entry throws through `NotImplemented_nid_no_patch`. Of the 20 missing from that catalogue, 18 are named by NID hash (17 share a `sceAjm` twin's 13.42 address) and 2 keep NID aliases. Data exports require separate layout and ownership analysis. Identified candidate names match their NIDs in the [public symbol database](https://github.com/zecoxao/sce_symbols/blob/2883963a0a514ba6e77407a08ef4730a65e88254/aerolib.csv) or [supplemental catalog](https://github.com/claimore22/ps5rs/blob/2304be5131221bae0dac24b9767cabffda33f747/data/nids.csv).
+- [Additional callable exports](../../../core/libs/prx/libSceAjmi/Export.cpp) - 21 entries present in both version-labelled images are import-resolution declarations only. None is listed in the pinned public 3.20 catalogue for this library. Neither label independently authenticates retail firmware provenance. Parameter lists, return types and behavior are unverified; parameterless `int` declarations are placeholders, not verified ABI contracts. Every entry throws through `NotImplemented_nid_no_patch`. Of the 20 missing from that catalogue, 18 are named by NID hash (17 share a `sceAjm` twin's 13.42 address) and 2 keep NID aliases. Data exports require separate layout and ownership analysis. Identified candidate names match their NIDs in the [public symbol database](https://github.com/zecoxao/sce_symbols/blob/2883963a0a514ba6e77407a08ef4730a65e88254/aerolib.csv) or [supplemental catalog](https://github.com/claimore22/ps5rs/blob/2304be5131221bae0dac24b9767cabffda33f747/data/nids.csv).
 
 | Name | NID |
 | --- | --- |
@@ -18,7 +18,6 @@
 | `sceAjmiDecAt9ParseConfigData` | `MTdd8ApwO50` |
 | `sceAjmiInitialize` | `QhA7rTjJbro` |
 | `sceAjmiBatchErrorDump` | `RbLGSlJB6dc` |
-| `sceAjmiInstanceCodecType` | `Uqtj4RSP-JQ` |
 | `sceAjmiMemoryUnregister` | `X8sT-xi-dVE` |
 | `sceAjmiInstanceDestroy` | `YtubBgSeNH0` |
 | `sceAjmiDecMp3ParseFrame` | `cWZnCK7na5Y` |
@@ -28,6 +27,8 @@
 | `sceAjmiInstanceCreate` | `ofRX8Vq0ss0` |
 | `sceAjmiInstanceExtend` | `pfPwiigOE3A` |
 | `sceAjmiBatchJobRunSplitBufferRa` | `r7NMFYcJi08` |
+
+- [sceAjmiInstanceCodecType](../../../core/libs/prx/libSceAjmi/Export.cpp) (libSceAjmi) - the meaning of the result and the instance id layout are unknown; the 32-bit parameter and `int` result come from the body, not a prototype. In firmware 13.42's `libSceAjmi.sprx` (SHA-256 `ff0dc985c1f7a6b25a766904e3a535b55e44d0d4b8872329d2bd6c019491df0b`), read from disassembly and not run on a console, it is `mov %edi,%eax; shr $0xe,%eax; ret` at `0xe50`: it returns its 32-bit argument shifted right by 14, with zeros shifted in, and reads or writes no memory.
 
 ### Unknown function info
 
