@@ -286,6 +286,11 @@ bool BlockWriteBackEach() {
     return each;
 }
 
+bool OwnStoresExempt() {
+    static const bool exempt = std::getenv("APS5_NO_OWN_STORE_EXEMPT") == nullptr;
+    return exempt;
+}
+
 bool StorageBlockUnits(const GuestTextureResource& descriptor, const SurfaceGeometry& geometry) {
     return LayerTrackingEnabled() && BlockTrackingEnabled() && !geometry.thick && descriptor.tileMode != TextureTileMode::kLinear && descriptor.baseAddress % 65536 == 0
         && std::none_of(geometry.mips.begin(), geometry.mips.end(), [](const TileMipLayout& mip) { return mip.gcnSplitStride != 0; });
@@ -4150,7 +4155,13 @@ std::uint64_t StorageTexture::writeBackWindows(std::span<const ImportSegment> se
         recorder->MarkCovered(storedAccess);
         // Only the pieces written into the import are stores a CPU reader must wait for; the
         // shadowed ones reach it through a publish, which notes its own.
-        if (!imported.empty()) recorder->NotePendingWrites(imported);
+        if (!imported.empty()) {
+            const auto firstNote = recorder->WriteNoteCount() + 1;
+            recorder->NotePendingWrites(imported);
+            if (OwnStoresExempt()) {
+                for (auto note = firstNote; note <= recorder->WriteNoteCount(); ++note) noteStore(note);
+            }
+        }
     }
     partialWriteBacks.fetch_add(1, std::memory_order_relaxed);
     partialWriteBackBytes.fetch_add(storedBytes, std::memory_order_relaxed);
@@ -4502,7 +4513,7 @@ void StorageTexture::noteStore(std::uint64_t note) {
     auto& pending = Pending();
     std::lock_guard lock(pending.mutex);
     storeNotes.push_back(note);
-    if (storeNotes.size() > 8) storeNotes.erase(storeNotes.begin());
+    if (storeNotes.size() > 64) storeNotes.erase(storeNotes.begin());
 }
 
 StorageTexture::DrawnArea StorageTexture::drawnArea() const {
@@ -4825,7 +4836,7 @@ bool StorageTexture::FlushPending(std::uint64_t address, std::size_t bytes, cons
         pending.flushingCount.store(pending.flushing.size(), std::memory_order_release);
         if (!flush.empty()) BumpPendingSerial();
         for (const auto& texture : flush) {
-            if (texture->drawnListed) ownNotes.insert(ownNotes.end(), texture->storeNotes.begin(), texture->storeNotes.end());
+            if (texture->drawnListed || OwnStoresExempt()) ownNotes.insert(ownNotes.end(), texture->storeNotes.begin(), texture->storeNotes.end());
         }
     }
     if (flush.empty()) {

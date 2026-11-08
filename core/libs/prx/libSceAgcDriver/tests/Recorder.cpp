@@ -6887,6 +6887,34 @@ bool smallTiledShadowLabelTests(const Device& device, Recorder& recorder) {
     settle();
     const auto held = static_cast<std::size_t>(std::count(memory + offset, memory + offset + layout.guestBytes, std::uint8_t{0x3c}));
     Require(held == 32u * 32u * 4u, "the label readback did not publish the small tiled image");
+#if !defined(__APPLE__)
+    {
+        const auto storeAtLabel = [&](std::uint8_t value) {
+            auto source = std::make_shared<Buffer>(context, 32u * 32u * 4u, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+            std::fill(source->Bytes().begin(), source->Bytes().end(), std::byte{value});
+            {
+                const auto commands = recorder.Commands();
+                recorder.Keep(image);
+                recorder.Keep(source);
+                RecordMemoryBarrier(context, commands, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+                VkBufferImageCopy copy{};
+                copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+                copy.imageExtent = {32, 32, 1};
+                context.Function<PFN_vkCmdCopyBufferToImage>("vkCmdCopyBufferToImage")(commands, source->Handle(), image->Image(), VK_IMAGE_LAYOUT_GENERAL, 1, &copy);
+                RecordMemoryBarrier(context, commands, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT);
+                image->MarkDirty();
+            }
+            StorageTexture::StoreReadbackBeforeLabel("readback before label");
+        };
+        storeAtLabel(0x4b);
+        const auto submitted = recorder.Submissions();
+        storeAtLabel(0x2d);
+        Require(recorder.Submissions() == submitted, "a label store of a small tiled image waited for that image's own earlier write-back");
+        settle();
+        const auto newest = static_cast<std::size_t>(std::count(memory + offset, memory + offset + layout.guestBytes, std::uint8_t{0x2d}));
+        Require(newest == 32u * 32u * 4u, "the second label store did not leave the image's newest results in guest memory");
+    }
+#endif
 #ifdef __APPLE__
     if (std::getenv("APS5_NO_LABEL_READ_TRAP") == nullptr) {
         const auto rewriteImage = [&](const std::shared_ptr<StorageTexture>& target, std::uint32_t extent, std::uint8_t value) {
