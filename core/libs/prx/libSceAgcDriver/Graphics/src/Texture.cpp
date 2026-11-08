@@ -5295,7 +5295,7 @@ std::size_t StorageTexture::StoreSmallPending(const char* reason) {
 }
 
 void StorageTexture::StoreReadbackBeforeLabel(const char* reason, VkDevice device) {
-    static const bool disabled = std::getenv("APS5_NO_LABEL_READBACK_STORE") != nullptr;
+    static const bool disabled = std::getenv("APS5_NO_LABEL_READBACK_STORE") != nullptr || std::getenv("APS5_LABEL_READBACK_STORE") == nullptr;
     if (disabled) return;
     std::vector<std::pair<std::uint64_t, std::size_t>> ranges;
     std::vector<std::pair<std::uint64_t, std::size_t>> occasional;
